@@ -1,7 +1,7 @@
 const inquirer = require("inquirer");
 const connection = require("./config/connection");
-const { listAllDepartments, listAllRoles, listAllEmployees } = require("./lib/queries")
-const { displayAllDepartments, displayAllRoles, displayAllEmployees } = require("./lib/displays")
+const { listAllDepartments, listAllRoles, addDepartment, listAllEmployees,addRole } = require("./lib/queries")
+const { displayTable } = require("./lib/displays")
 /*
   There are a lot of menu items presented to users in this app. The only real way you cam manage them 
   is by creating a function to handle each one.
@@ -33,7 +33,7 @@ function start(){
       // list all departments in the db
       case "List all Departments":
         listAllDepartments().then(([rows]) => {
-          // displayTable(rows);
+          displayTable(rows);
           start();
         });
         break;
@@ -63,7 +63,7 @@ function start(){
           {
             type: 'input',
             message: 'What is the name of the new department?',
-            name: 'departmentName'
+            name: 'name'
           }]).then((response) => {
             addDepartment(response).then(() => {
               listAllDepartments().then(([rows]) => {
@@ -78,53 +78,9 @@ function start(){
 
       // add a role to the db
       case "Add a Role":
-        // declare variables
-        let titleOfRole
-        let salaryOfRole
-
-        // get all departments and put into array to use in prompt
-        listAllDepartments()
-        .then((departments) => createDepartmentsArray(departments[0]))
-        .then((array) => {
-          inquirer.prompt([
-            {
-              type: 'input',
-              message: 'What is the title of the new role?',
-              name: 'roleTitle'
-            },
-            {
-              type: 'input',
-              message: 'What is the salary of the new role?',
-              name: 'roleSalary'
-            },
-            {
-              type: 'list',
-              message: 'What department does the new role belong to?',
-              name: 'roleDepartment',
-              choices: array
-            },
-          ])
-
-          
-          .then((response) => {
-            titleOfRole = response.roleTitle;
-            salaryOfRole = response.roleSalary;
-            return findDepartmentId(response.roleDepartment)
-          })
-
-          // send data to addRole()
-          .then((data) => {
-            // console.log(data);
-            const data1 = data[0];
-            addRole(data1[0].id, titleOfRole, salaryOfRole);
-          })
-
-          // display all Roles and success message in terminal
-          .then((res) => listAllRoles()).then(([rows]) => {
-            displayTable(rows);
-                console.log(`${titleOfRole} Role has been added to database.`)
-                start();
-          })})
+     
+          addingRole()
+         
         break;
       
 
@@ -268,4 +224,44 @@ function start(){
   })
 }
 
+
+
+ const addingRole= async ()=>{
+  try{
+    const data =await listAllDepartments()
+    const departments= data.map((department)=>({
+      name:department.name,
+      value:department.id
+    }));
+   
+  
+     const response= await inquirer.prompt([
+      {
+        type: 'input',
+        message: 'What is the title of the new role?',
+        name: 'roleTitle'
+      },
+      {
+        type: 'input',
+        message: 'What is the salary of the new role?',
+        name: 'roleSalary'
+      },
+      {
+        type: 'list',
+        message: 'What department does the new role belong to?',
+        name: 'roleDepartment',
+        choices: departments,
+       
+      },
+    ])
+    await addRole(response);
+    const [rows]= await listAllRoles();
+    displayTable(rows)
+    start();
+  
+  }catch(error){
+      console.error(error)
+    }
+
+ }
 start();
